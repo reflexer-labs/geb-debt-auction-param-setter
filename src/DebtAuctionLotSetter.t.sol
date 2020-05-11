@@ -2,13 +2,13 @@ pragma solidity ^0.5.15;
 
 import "ds-test/test.sol";
 
-import "./YapDebtAuctionLotSetter.sol";
+import "./DebtAuctionLotSetter.sol";
 
-contract YapDebtAuctionLotSetterTest is DSTest {
-    YapDebtAuctionLotSetter setter;
+contract DebtAuctionLotSetterTest is DSTest {
+    DebtAuctionLotSetter setter;
 
     function setUp() public {
-        setter = new YapDebtAuctionLotSetter();
+        //setter = new DebtAuctionLotSetter();
     }
 
     function testFail_basic_sanity() public {
