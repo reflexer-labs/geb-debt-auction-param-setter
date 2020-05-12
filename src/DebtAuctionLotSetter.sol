@@ -72,14 +72,14 @@ contract DebtAuctionLotSetter {
 
         protocolTokenOrcl     = OracleLike(protocolTokenOrcl_);
         systemCoinOrcl        = OracleLike(systemCoinOrcl_);
-        accountingEngine      = AccountingEngineLike(accountingEngine);
+        accountingEngine      = AccountingEngineLike(accountingEngine_);
 
         minAuctionedAmount    = minAuctionedAmount_;
         protocolTokenDiscount = protocolTokenDiscount_;
     }
 
     // --- Math ---
-    uint public RAY = 10 ** 27;
+    uint public WAD = 10 ** 18;
     uint public THOUSAND = 10 ** 3;
     function add(uint x, uint y) internal pure returns (uint z) {
         z = x + y;
@@ -125,7 +125,7 @@ contract DebtAuctionLotSetter {
         require(both(validProtocolPrice, validSysCoinPrice), "DebtAuctionLotSetter/invalid-prices");
 
         uint baseAuctionedAmount = div(
-          mul(div(accountingEngine.debtAuctionBidSize(), RAY), uint(systemCoinPrice)),
+          mul(div(accountingEngine.debtAuctionBidSize(), WAD), uint(systemCoinPrice)),
           uint(protocolTknPrice)
         );
 
@@ -133,7 +133,9 @@ contract DebtAuctionLotSetter {
           baseAuctionedAmount,
           div(mul(baseAuctionedAmount, protocolTokenDiscount), THOUSAND)
         );
-        baseAuctionedAmount = (baseAuctionedAmount < minAuctionedAmount) ? minAuctionedAmount : baseAuctionedAmount;
+
+        baseAuctionedAmount = div(baseAuctionedAmount, 10 ** 9);
+        baseAuctionedAmount = (baseAuctionedAmount == 0) ? minAuctionedAmount : baseAuctionedAmount;
 
         accountingEngine.modifyParameters("initialDebtAuctionAmount", baseAuctionedAmount);
     }
