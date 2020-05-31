@@ -6,11 +6,11 @@ contract AccountingEngineLike {
 contract OracleLike {
     function getResultWithValidity() external view returns (bytes32, bool);
 }
-contract DebtAuctionLotSetterLike {
+contract GebDebtAuctionLotSetterLike {
     function setAuctionedAmount() external;
 }
 
-contract DebtBidTargetSetter {
+contract GebDebtBidTargetSetter {
     // --- Auth ---
     mapping (address => uint) public authorizedAccounts;
     /**
@@ -54,11 +54,11 @@ contract DebtBidTargetSetter {
         }
     }
 
-    uint256                  public debtAuctionBidTarget;
+    uint256                     public debtAuctionBidTarget;
 
-    OracleLike               public systemCoinOrcl;
-    AccountingEngineLike     public accountingEngine;
-    DebtAuctionLotSetterLike public debtAuctionLotSetter;
+    OracleLike                  public systemCoinOrcl;
+    AccountingEngineLike        public accountingEngine;
+    GebDebtAuctionLotSetterLike public debtAuctionLotSetter;
 
     constructor(
       uint debtAuctionBidTarget_,
@@ -68,16 +68,17 @@ contract DebtBidTargetSetter {
     ) public {
         require(debtAuctionBidTarget_ > 0, "DebtBidTargetSetter/null-debtAuctionBidTarget");
         authorizedAccounts[msg.sender] = 1;
+        debtAuctionBidTarget = debtAuctionBidTarget_;
         systemCoinOrcl = OracleLike(systemCoinOrcl_);
         accountingEngine = AccountingEngineLike(accountingEngine_);
-        debtAuctionLotSetter = DebtAuctionLotSetterLike(debtAuctionLotSetter_);
+        debtAuctionLotSetter = GebDebtAuctionLotSetterLike(debtAuctionLotSetter_);
     }
 
     // --- Administration ---
     function modifyParameters(bytes32 parameter, address addr) external emitLog isAuthorized {
         if (parameter == "systemCoinOrcl") systemCoinOrcl = OracleLike(addr);
         else if (parameter == "accountingEngine") accountingEngine = AccountingEngineLike(addr);
-        else if (parameter == "debtAuctionLotSetter") debtAuctionLotSetter = DebtAuctionLotSetterLike(addr);
+        else if (parameter == "debtAuctionLotSetter") debtAuctionLotSetter = GebDebtAuctionLotSetterLike(addr);
         else revert("DebtBidTargetSetter/modify-unrecognized-param");
     }
     function modifyParameters(bytes32 parameter, uint data) external emitLog isAuthorized {
@@ -101,6 +102,7 @@ contract DebtBidTargetSetter {
     function adjustBidTarget() public emitLog {
         (bytes32 systemCoinPrice, bool validPrice) = systemCoinOrcl.getResultWithValidity();
         require(validPrice, "DebtBidTargetSetter/invalid-orcl-price");
+        require(debtAuctionBidTarget > 0, "DebtBidTargetSetter/invalid-debt-auction-target");
 
         accountingEngine.modifyParameters(
           "debtAuctionBidSize",

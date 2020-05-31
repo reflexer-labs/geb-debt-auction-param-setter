@@ -8,7 +8,7 @@ contract AccountingEngineLike {
     function modifyParameters(bytes32, uint) external;
 }
 
-contract DebtAuctionLotSetter {
+contract GebDebtAuctionLotSetter {
     // --- Auth ---
     mapping (address => uint) public authorizedAccounts;
     /**

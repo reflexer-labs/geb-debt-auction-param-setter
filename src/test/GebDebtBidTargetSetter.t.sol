@@ -2,8 +2,8 @@ pragma solidity ^0.5.15;
 
 import "ds-test/test.sol";
 
-import "../DebtBidTargetSetter.sol";
-import {DebtAuctionLotSetter} from "../DebtAuctionLotSetter.sol";
+import "../GebDebtBidTargetSetter.sol";
+import {GebDebtAuctionLotSetter} from "../GebDebtAuctionLotSetter.sol";
 
 contract Oracle is OracleLike {
     uint price;
@@ -23,11 +23,9 @@ contract Oracle is OracleLike {
 contract AccountingEngine is AccountingEngineLike {
     uint public initialDebtAuctionAmount;
     uint public debtAuctionBidSize;
-    uint public debtAuctionBidTarget;
 
-    constructor(uint debtAuctionBidSize_, uint debtAuctionBidTarget_) public {
+    constructor(uint debtAuctionBidSize_) public {
         debtAuctionBidSize = debtAuctionBidSize_;
-        debtAuctionBidTarget = debtAuctionBidTarget_;
     }
 
     function modifyParameters(bytes32 parameter, uint val) external {
@@ -37,25 +35,26 @@ contract AccountingEngine is AccountingEngineLike {
     }
 }
 
-contract DebtBidTargetSetterTest is DSTest {
+contract GebDebtBidTargetSetterTest is DSTest {
     Oracle protocolTokenOrcl;
     Oracle systemCoinOrcl;
     AccountingEngine accountingEngine;
-    DebtBidTargetSetter bidTargetSetter;
-    DebtAuctionLotSetter lotSetter;
+    GebDebtBidTargetSetter bidTargetSetter;
+    GebDebtAuctionLotSetter lotSetter;
 
     function setUp() public {
-        accountingEngine = new AccountingEngine(rad(50 ether), rad(1000 ether));
+        accountingEngine = new AccountingEngine(rad(50 ether));
         protocolTokenOrcl = new Oracle(1 ether);
         systemCoinOrcl = new Oracle(42 ether);
-        lotSetter = new DebtAuctionLotSetter(
+        lotSetter = new GebDebtAuctionLotSetter(
           address(protocolTokenOrcl),
           address(systemCoinOrcl),
           address(accountingEngine),
           0.5 ether,
           200
         );
-        bidTargetSetter = new DebtBidTargetSetter(
+        bidTargetSetter = new GebDebtBidTargetSetter(
+          rad(1000 ether),
           address(systemCoinOrcl),
           address(accountingEngine),
           address(lotSetter)
@@ -72,17 +71,18 @@ contract DebtBidTargetSetterTest is DSTest {
     }
 
     function testFail_invalid_system_coin_price() public {
-        accountingEngine = new AccountingEngine(rad(50 ether), rad(1000 ether));
+        accountingEngine = new AccountingEngine(rad(50 ether));
         protocolTokenOrcl = new Oracle(1 ether);
         systemCoinOrcl = new Oracle(0);
-        lotSetter = new DebtAuctionLotSetter(
+        lotSetter = new GebDebtAuctionLotSetter(
           address(protocolTokenOrcl),
           address(systemCoinOrcl),
           address(accountingEngine),
           0.5 ether,
           200
         );
-        bidTargetSetter = new DebtBidTargetSetter(
+        bidTargetSetter = new GebDebtBidTargetSetter(
+          rad(1000 ether),
           address(systemCoinOrcl),
           address(accountingEngine),
           address(lotSetter)
