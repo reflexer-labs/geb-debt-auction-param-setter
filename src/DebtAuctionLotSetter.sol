@@ -1,7 +1,7 @@
 pragma solidity ^0.5.15;
 
 contract OracleLike {
-    function getPriceWithValidity() external view returns (bytes32, bool);
+    function getResultWithValidity() external view returns (bytes32, bool);
 }
 contract AccountingEngineLike {
     function debtAuctionBidSize() external view returns (uint);
@@ -120,8 +120,8 @@ contract DebtAuctionLotSetter {
 
     // --- Setter ---
     function setAuctionedAmount() external emitLog {
-        (bytes32 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getPriceWithValidity();
-        (bytes32 systemCoinPrice, bool validSysCoinPrice) = systemCoinOrcl.getPriceWithValidity();
+        (bytes32 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
+        (bytes32 systemCoinPrice, bool validSysCoinPrice) = systemCoinOrcl.getResultWithValidity();
         require(both(validProtocolPrice, validSysCoinPrice), "DebtAuctionLotSetter/invalid-prices");
 
         uint baseAuctionedAmount = div(

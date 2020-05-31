@@ -1,11 +1,10 @@
 pragma solidity ^0.5.15;
 
 contract AccountingEngineLike {
-    function debtAuctionBidTarget() external view returns (uint);
     function modifyParameters(bytes32, uint) external;
 }
 contract OracleLike {
-    function getPriceWithValidity() external view returns (bytes32, bool);
+    function getResultWithValidity() external view returns (bytes32, bool);
 }
 contract DebtAuctionLotSetterLike {
     function setAuctionedAmount() external;
@@ -55,15 +54,19 @@ contract DebtBidTargetSetter {
         }
     }
 
+    uint256                  public debtAuctionBidTarget;
+
     OracleLike               public systemCoinOrcl;
     AccountingEngineLike     public accountingEngine;
     DebtAuctionLotSetterLike public debtAuctionLotSetter;
 
     constructor(
+      uint debtAuctionBidTarget_,
       address systemCoinOrcl_,
       address accountingEngine_,
       address debtAuctionLotSetter_
     ) public {
+        require(debtAuctionBidTarget_ > 0, "DebtBidTargetSetter/null-debtAuctionBidTarget");
         authorizedAccounts[msg.sender] = 1;
         systemCoinOrcl = OracleLike(systemCoinOrcl_);
         accountingEngine = AccountingEngineLike(accountingEngine_);
@@ -75,6 +78,10 @@ contract DebtBidTargetSetter {
         if (parameter == "systemCoinOrcl") systemCoinOrcl = OracleLike(addr);
         else if (parameter == "accountingEngine") accountingEngine = AccountingEngineLike(addr);
         else if (parameter == "debtAuctionLotSetter") debtAuctionLotSetter = DebtAuctionLotSetterLike(addr);
+        else revert("DebtBidTargetSetter/modify-unrecognized-param");
+    }
+    function modifyParameters(bytes32 parameter, uint data) external emitLog isAuthorized {
+        if (parameter == "debtAuctionBidTarget") debtAuctionBidTarget = data;
         else revert("DebtBidTargetSetter/modify-unrecognized-param");
     }
 
@@ -92,12 +99,12 @@ contract DebtBidTargetSetter {
 
     // --- Adjustment ---
     function adjustBidTarget() public emitLog {
-        (bytes32 systemCoinPrice, bool validPrice) = systemCoinOrcl.getPriceWithValidity();
+        (bytes32 systemCoinPrice, bool validPrice) = systemCoinOrcl.getResultWithValidity();
         require(validPrice, "DebtBidTargetSetter/invalid-orcl-price");
 
         accountingEngine.modifyParameters(
           "debtAuctionBidSize",
-          rayToRad(div(accountingEngine.debtAuctionBidTarget(), uint(systemCoinPrice)))
+          rayToRad(div(debtAuctionBidTarget, uint(systemCoinPrice)))
         );
 
         debtAuctionLotSetter.setAuctionedAmount();

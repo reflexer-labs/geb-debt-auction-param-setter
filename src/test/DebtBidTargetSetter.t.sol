@@ -16,7 +16,7 @@ contract Oracle is OracleLike {
     function modifyParameters(bytes32 parameter, uint value) external {
         price = value;
     }
-    function getPriceWithValidity() external view returns (bytes32, bool) {
+    function getResultWithValidity() external view returns (bytes32, bool) {
         return (bytes32(price), price > 0);
     }
 }
