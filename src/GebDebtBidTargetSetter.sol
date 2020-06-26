@@ -1,13 +1,13 @@
-pragma solidity ^0.5.15;
+pragma solidity ^0.6.7;
 
-contract AccountingEngineLike {
-    function modifyParameters(bytes32, uint) external;
+abstract contract AccountingEngineLike {
+    function modifyParameters(bytes32, uint) virtual external;
 }
-contract OracleLike {
-    function getResultWithValidity() external view returns (bytes32, bool);
+abstract contract OracleLike {
+    function getResultWithValidity() virtual external view returns (bytes32, bool);
 }
-contract GebDebtAuctionLotSetterLike {
-    function setAuctionedAmount() external;
+abstract contract GebDebtAuctionLotSetterLike {
+    function setAuctionedAmount() virtual external;
 }
 
 contract GebDebtBidTargetSetter {
@@ -40,7 +40,7 @@ contract GebDebtBidTargetSetter {
         assembly {
             // log an 'anonymous' event with a constant 6 words of calldata
             // and four indexed topics: the selector and the first three args
-            let mark := msize                         // end of memory ensures zero
+            let mark := msize()                       // end of memory ensures zero
             mstore(0x40, add(mark, 288))              // update free memory pointer
             mstore(mark, 0x20)                        // bytes type data offset
             mstore(add(mark, 0x20), 224)              // bytes size (padded)

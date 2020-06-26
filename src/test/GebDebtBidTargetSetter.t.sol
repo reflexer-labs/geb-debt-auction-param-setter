@@ -1,4 +1,4 @@
-pragma solidity ^0.5.15;
+pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
@@ -16,22 +16,28 @@ contract Oracle is OracleLike {
     function modifyParameters(bytes32 parameter, uint value) external {
         price = value;
     }
-    function getResultWithValidity() external view returns (bytes32, bool) {
+    function getResultWithValidity() override external view returns (bytes32, bool) {
         return (bytes32(price), price > 0);
     }
 }
 contract AccountingEngine is AccountingEngineLike {
-    uint public initialDebtAuctionAmount;
-    uint public debtAuctionBidSize;
+    uint _initialDebtAuctionAmount;
+    uint _debtAuctionBidSize;
 
     constructor(uint debtAuctionBidSize_) public {
-        debtAuctionBidSize = debtAuctionBidSize_;
+        _debtAuctionBidSize = debtAuctionBidSize_;
     }
 
-    function modifyParameters(bytes32 parameter, uint val) external {
-        if (parameter == "initialDebtAuctionAmount") initialDebtAuctionAmount = val;
-        else if (parameter == "debtAuctionBidSize") debtAuctionBidSize = val;
+    function modifyParameters(bytes32 parameter, uint val) override external {
+        if (parameter == "initialDebtAuctionAmount") _initialDebtAuctionAmount = val;
+        else if (parameter == "debtAuctionBidSize") _debtAuctionBidSize = val;
         else revert();
+    }
+    function debtAuctionBidSize() public view returns (uint) {
+        return _debtAuctionBidSize;
+    }
+    function initialDebtAuctionAmount() public view returns (uint) {
+        return _initialDebtAuctionAmount;
     }
 }
 
