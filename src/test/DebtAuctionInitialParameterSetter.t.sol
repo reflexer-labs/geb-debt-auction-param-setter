@@ -113,9 +113,6 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
         assertEq(setter.perSecondCallerRewardIncrease(), perSecondCallerRewardIncrease);
         assertEq(setter.bidTargetValue(), bidTargetValue);
     }
-    function test_change_parameters() public {
-
-    }
     function testFail_getNewDebtBid_null_price() public {
         sysCoinFeed.set_val(0);
         setter.getNewDebtBid();
