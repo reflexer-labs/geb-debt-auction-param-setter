@@ -106,6 +106,7 @@ contract DebtAuctionInitialParameterSetter {
         perSecondCallerRewardIncrease  = perSecondCallerRewardIncrease_;
         updateDelay                    = updateDelay_;
         bidTargetValue                 = bidTargetValue_;
+        maxRewardIncreaseDelay         = uint(-1);
 
         emit AddAuthorization(msg.sender);
         emit ModifyParameters(bytes32("protocolTokenOrcl"), protocolTokenOrcl_);
