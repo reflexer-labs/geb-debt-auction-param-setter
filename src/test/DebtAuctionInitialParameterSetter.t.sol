@@ -97,48 +97,103 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
     }
 
     function test_setup() public {
+        assertEq(setter.authorizedAccounts(address(this)), 1);
 
+        assertTrue(address(setter.protocolTokenOrcl()) == address(protocolTokenFeed));
+        assertTrue(address(setter.systemCoinOrcl()) == address(sysCoinFeed));
+        assertTrue(address(setter.accountingEngine()) == address(accountingEngine));
+        assertTrue(address(setter.treasury()) == address(treasury));
+
+        assertEq(setter.updateDelay(), periodSize);
+        assertEq(setter.minProtocolTokenAmountOffered(), minProtocolTokenAmountOffered);
+        assertEq(setter.protocolTokenPremium(), protocolTokenPremium);
+        assertEq(setter.baseUpdateCallerReward(), baseUpdateCallerReward);
+        assertEq(setter.maxUpdateCallerReward(), maxUpdateCallerReward);
+
+        assertEq(setter.perSecondCallerRewardIncrease(), perSecondCallerRewardIncrease);
+        assertEq(setter.bidTargetValue(), bidTargetValue);
     }
     function test_change_parameters() public {
 
     }
-    function test_getNewDebtBid_null_price() public {
-
+    function testFail_getNewDebtBid_null_price() public {
+        sysCoinFeed.set_val(0);
+        setter.getNewDebtBid();
     }
-    function test_getNewDebtBid_invalid_price() public {
-
+    function testFail_getNewDebtBid_invalid_price() public {
+        sysCoinFeed.set_has(false);
+        setter.getNewDebtBid();
     }
     function test_getNewDebtBid() public {
-
+        assertEq(setter.getNewDebtBid(), 49627791563275434243176000000000000000000000000000);
     }
-    function test_getRawProtocolTokenAmount_null_price() public {
-
+    function testFail_getRawProtocolTokenAmount_null_price() public {
+        protocolTokenFeed.set_val(0);
+        setter.getRawProtocolTokenAmount();
     }
-    function test_getRawProtocolTokenAmount_invalid_price() public {
-
+    function testFail_getRawProtocolTokenAmount_invalid_price() public {
+        protocolTokenFeed.set_has(false);
+        setter.getRawProtocolTokenAmount();
     }
     function test_getRawProtocolTokenAmount() public {
-
+        assertEq(setter.getRawProtocolTokenAmount(), 100 ether);
     }
-    function test_getPremiumAdjustedProtocolTokenAmount_null_price() public {
-
+    function testFail_getPremiumAdjustedProtocolTokenAmount_null_price() public {
+        protocolTokenFeed.set_val(0);
+        setter.getPremiumAdjustedProtocolTokenAmount();
     }
-    function test_getPremiumAdjustedProtocolTokenAmount_invalid_price() public {
-
+    function testFail_getPremiumAdjustedProtocolTokenAmount_invalid_price() public {
+        protocolTokenFeed.set_has(false);
+        setter.getPremiumAdjustedProtocolTokenAmount();
     }
     function test_getPremiumAdjustedProtocolTokenAmount() public {
-
+        assertEq(setter.getPremiumAdjustedProtocolTokenAmount(), 70 ether);
     }
-    function test_set_params_invalid_prices() public {
-
+    function testFail_set_params_invalid_prot_price() public {
+        protocolTokenFeed.set_has(false);
+        setter.setDebtAuctionInitialParameters(address(this));
     }
-    function test_set_params_null_prices() public {
-
+    function testFail_set_params_invalid_sys_coin_price() public {
+        sysCoinFeed.set_has(false);
+        setter.setDebtAuctionInitialParameters(address(this));
+    }
+    function testFail_set_params_null_sys_coin_price() public {
+        sysCoinFeed.set_val(0);
+        setter.setDebtAuctionInitialParameters(address(this));
+    }
+    function testFail_set_params_null_prot_price() public {
+        protocolTokenFeed.set_val(0);
+        setter.setDebtAuctionInitialParameters(address(this));
+    }
+    function testFail_set_params_before_period_elapsed() public {
+        setter.setDebtAuctionInitialParameters(address(this));
+        setter.setDebtAuctionInitialParameters(address(this));
     }
     function test_set_params_in_accounting_engine() public {
-
+        setter.setDebtAuctionInitialParameters(address(this));
+        assertEq(accountingEngine.debtAuctionBidSize(), 49627791563275434243176000000000000000000000000000);
+        assertEq(accountingEngine.initialDebtAuctionMintedTokens(), 70 ether);
     }
-    function test_set_params_get_rewarded() public {
+    function test_set_params_after_delay() public {
+        setter.setDebtAuctionInitialParameters(address(this));
+        hevm.warp(now + periodSize);
+        setter.setDebtAuctionInitialParameters(address(this));
+        assertEq(systemCoin.balanceOf(address(this)), 10 ether);
+    }
+    function test_set_params_get_self_rewarded() public {
+        assertEq(systemCoin.balanceOf(address(this)), 0);
+        assertEq(systemCoin.balanceOf(address(treasury)), coinsToMint);
 
+        setter.setDebtAuctionInitialParameters(address(0));
+        assertEq(systemCoin.balanceOf(address(this)), 5 ether);
+        assertEq(systemCoin.balanceOf(address(treasury)), coinsToMint - 5 ether);
+    }
+    function test_set_params_get_other_rewarded() public {
+        assertEq(systemCoin.balanceOf(address(1)), 0);
+        assertEq(systemCoin.balanceOf(address(treasury)), coinsToMint);
+
+        setter.setDebtAuctionInitialParameters(address(1));
+        assertEq(systemCoin.balanceOf(address(1)), 5 ether);
+        assertEq(systemCoin.balanceOf(address(treasury)), coinsToMint - 5 ether);
     }
 }
