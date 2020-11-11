@@ -266,10 +266,9 @@ contract DebtAuctionInitialParameterSetter {
 
     // --- Setter ---
     function getNewDebtBid() public view returns (uint256 debtAuctionBidSize) {
-        // Get token prices
-        (, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
+        // Get token price
         (uint256 systemCoinPrice, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
-        require(both(validProtocolPrice, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-prices");
+        require(both(systemCoinPrice > 0, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the bid size
         debtAuctionBidSize = divide(multiply(bidTargetValue, WAD), systemCoinPrice);
@@ -279,10 +278,9 @@ contract DebtAuctionInitialParameterSetter {
         debtAuctionBidSize = multiply(debtAuctionBidSize, RAY);
     }
     function getRawProtocolTokenAmount() public view returns (uint256 debtAuctionMintedTokens) {
-        // Get token prices
+        // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
-        (, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
-        require(both(validProtocolPrice, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-prices");
+        require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the amont of protocol tokens without the premium
         debtAuctionMintedTokens = divide(multiply(bidTargetValue, WAD), protocolTknPrice);
@@ -293,10 +291,9 @@ contract DebtAuctionInitialParameterSetter {
         }
     }
     function getPremiumAdjustedProtocolTokenAmount() public view returns (uint256 debtAuctionMintedTokens) {
-        // Get token prices
+        // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
-        (, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
-        require(both(validProtocolPrice, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-prices");
+        require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the amont of protocol tokens without the premium
         debtAuctionMintedTokens = divide(multiply(bidTargetValue, WAD), protocolTknPrice);
@@ -321,6 +318,7 @@ contract DebtAuctionInitialParameterSetter {
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
         (uint256 systemCoinPrice, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
         require(both(validProtocolPrice, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-prices");
+        require(both(protocolTknPrice > 0, systemCoinPrice > 0), "DebtAuctionInitialParameterSetter/null-prices");
 
         // Compute the scaled bid target value
         uint256 scaledBidTargetValue = multiply(bidTargetValue, WAD);
