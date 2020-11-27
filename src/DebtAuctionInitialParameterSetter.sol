@@ -67,6 +67,7 @@ contract DebtAuctionInitialParameterSetter {
     event ModifyParameters(bytes32 parameter, address addr);
     event ModifyParameters(bytes32 parameter, uint256 data);
     event AddAuthorization(address account);
+    event SetDebtAuctionInitialParameters(uint256 debtAuctionBidSize, uint256 initialDebtAuctionMintedTokens);
     event RemoveAuthorization(address account);
     event RewardCaller(address feeReceiver, uint256 amount);
     event FailRewardCaller(bytes revertReason, address finalFeeReceiver, uint256 reward);
@@ -226,6 +227,10 @@ contract DebtAuctionInitialParameterSetter {
           require(val > 0, "DebtAuctionInitialParameterSetter/invalid-bid-target-value");
           bidTargetValue = val;
         }
+        else if (parameter == "lastUpdateTime") {
+          require(val > now, "DebtAuctionInitialParameterSetter/");
+          lastUpdateTime = val;
+        }
         else revert("DebtAuctionInitialParameterSetter/modify-unrecognized-param");
         emit ModifyParameters(parameter, val);
     }
@@ -346,7 +351,22 @@ contract DebtAuctionInitialParameterSetter {
         accountingEngine.modifyParameters("debtAuctionBidSize", debtAuctionBidSize);
         accountingEngine.modifyParameters("initialDebtAuctionMintedTokens", initialDebtAuctionMintedTokens);
 
+        // Emit an event
+        emit SetDebtAuctionInitialParameters(debtAuctionBidSize, initialDebtAuctionMintedTokens);
+
         // Pay the caller for updating the rate
         rewardCaller(feeReceiver, callerReward);
+    }
+
+    /*
+    * @notice Manually set initial debt auction parameters
+    * @param debtAuctionBidSize The initial debt auction bid size
+    * @param initialDebtAuctionMintedTokens The initial amount of protocol tokens to mint in exchange for debtAuctionBidSize system coins
+    */
+    function manualSetDebtAuctionParameters(uint256 debtAuctionBidSize, uint256 initialDebtAuctionMintedTokens)
+      external isAuthorized {
+        accountingEngine.modifyParameters("debtAuctionBidSize", debtAuctionBidSize);
+        accountingEngine.modifyParameters("initialDebtAuctionMintedTokens", initialDebtAuctionMintedTokens);
+        emit SetDebtAuctionInitialParameters(debtAuctionBidSize, initialDebtAuctionMintedTokens);
     }
 }

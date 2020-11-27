@@ -10,6 +10,12 @@ abstract contract Hevm {
     function warp(uint256) virtual public;
 }
 
+contract Attacker {
+    function doManualSetDebtAuctionParameters(address setter, uint256 debtAuctionBidSize, uint256 initialDebtAuctionMintedTokens) public {
+        DebtAuctionInitialParameterSetter(setter).manualSetDebtAuctionParameters(debtAuctionBidSize, initialDebtAuctionMintedTokens);
+    }
+}
+
 contract Feed {
     uint256 public priceFeedValue;
     bool public hasValidValue;
@@ -192,5 +198,21 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
         setter.setDebtAuctionInitialParameters(address(1));
         assertEq(systemCoin.balanceOf(address(1)), 5 ether);
         assertEq(systemCoin.balanceOf(address(treasury)), coinsToMint - 5 ether);
+    }
+    function test_manually_set_debt_initial_params() public {
+        setter.manualSetDebtAuctionParameters(100E27, 2E18);
+        assertEq(accountingEngine.debtAuctionBidSize(), 100E27);
+        assertEq(accountingEngine.initialDebtAuctionMintedTokens(), 2E18);
+    }
+    function testFail_manually_set_params_by_unauthorized() public {
+        Attacker attacker = new Attacker();
+        attacker.doManualSetDebtAuctionParameters(address(setter), 100E27, 2E18);
+    }
+    function test_set_lastUpdateTime() public {
+        setter.modifyParameters("lastUpdateTime", now + 1 days);
+        assertEq(setter.lastUpdateTime(), now + 1 days);
+
+        setter.modifyParameters("lastUpdateTime", now + 1000 weeks);
+        assertEq(setter.lastUpdateTime(), now + 1000 weeks);
     }
 }
