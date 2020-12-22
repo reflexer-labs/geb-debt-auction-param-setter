@@ -274,7 +274,7 @@ contract DebtAuctionInitialParameterSetter {
     }
 
     // --- Setter ---
-    function getNewDebtBid() public view returns (uint256 debtAuctionBidSize) {
+    function getNewDebtBid() external view returns (uint256 debtAuctionBidSize) {
         // Get token price
         (uint256 systemCoinPrice, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
         require(both(systemCoinPrice > 0, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-price");
@@ -285,7 +285,7 @@ contract DebtAuctionInitialParameterSetter {
           debtAuctionBidSize = RAY;
         }
     }
-    function getRawProtocolTokenAmount() public view returns (uint256 debtAuctionMintedTokens) {
+    function getRawProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
@@ -298,7 +298,7 @@ contract DebtAuctionInitialParameterSetter {
           debtAuctionMintedTokens = minProtocolTokenAmountOffered;
         }
     }
-    function getPremiumAdjustedProtocolTokenAmount() public view returns (uint256 debtAuctionMintedTokens) {
+    function getPremiumAdjustedProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
