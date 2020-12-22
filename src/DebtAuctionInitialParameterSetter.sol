@@ -280,11 +280,10 @@ contract DebtAuctionInitialParameterSetter {
         require(both(systemCoinPrice > 0, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the bid size
-        debtAuctionBidSize = divide(multiply(bidTargetValue, WAD), systemCoinPrice);
-        if (debtAuctionBidSize == 0) {
-          debtAuctionBidSize = 1;
+        debtAuctionBidSize = divide(multiply(multiply(bidTargetValue, WAD), RAY), systemCoinPrice);
+        if (debtAuctionBidSize < RAY) {
+          debtAuctionBidSize = RAY;
         }
-        debtAuctionBidSize = multiply(debtAuctionBidSize, RAY);
     }
     function getRawProtocolTokenAmount() public view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
@@ -304,11 +303,8 @@ contract DebtAuctionInitialParameterSetter {
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
 
-        // Compute the amont of protocol tokens without the premium
-        debtAuctionMintedTokens = divide(multiply(bidTargetValue, WAD), protocolTknPrice);
-
-        // Apply the premium
-        debtAuctionMintedTokens = divide(multiply(debtAuctionMintedTokens, protocolTokenPremium), THOUSAND);
+        // Compute the amont of protocol tokens without the premium and apply it
+        debtAuctionMintedTokens = divide(divide(multiply(multiply(bidTargetValue, WAD), protocolTokenPremium), protocolTknPrice), THOUSAND);
 
         // Take into account the minimum amount of protocol tokens to offer
         if (debtAuctionMintedTokens < minProtocolTokenAmountOffered) {
@@ -344,11 +340,10 @@ contract DebtAuctionInitialParameterSetter {
         }
 
         // Compute the debtAuctionBidSize as a RAD taking into account the minimum amount to bid
-        uint256 debtAuctionBidSize = divide(scaledBidTargetValue, systemCoinPrice);
-        if (debtAuctionBidSize == 0) {
-          debtAuctionBidSize = 1;
+        uint256 debtAuctionBidSize = divide(multiply(scaledBidTargetValue, RAY), systemCoinPrice);
+        if (debtAuctionBidSize < RAY) {
+          debtAuctionBidSize = RAY;
         }
-        debtAuctionBidSize = multiply(debtAuctionBidSize, RAY);
 
         // Set the debt bid and the associated protocol token amount in the accounting engine
         accountingEngine.modifyParameters("debtAuctionBidSize", debtAuctionBidSize);

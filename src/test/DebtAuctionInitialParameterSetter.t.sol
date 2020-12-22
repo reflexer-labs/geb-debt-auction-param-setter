@@ -128,7 +128,7 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
         setter.getNewDebtBid();
     }
     function test_getNewDebtBid() public {
-        assertEq(setter.getNewDebtBid(), 49627791563275434243176000000000000000000000000000);
+        assertEq(setter.getNewDebtBid(), 49627791563275434243176178660049627791563275434243);
     }
     function testFail_getRawProtocolTokenAmount_null_price() public {
         protocolTokenFeed.set_val(0);
@@ -174,7 +174,7 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
     }
     function test_set_params_in_accounting_engine() public {
         setter.setDebtAuctionInitialParameters(address(this));
-        assertEq(accountingEngine.debtAuctionBidSize(), 49627791563275434243176000000000000000000000000000);
+        assertEq(accountingEngine.debtAuctionBidSize(), 49627791563275434243176178660049627791563275434243);
         assertEq(accountingEngine.initialDebtAuctionMintedTokens(), 70 ether);
     }
     function test_set_params_after_delay() public {
