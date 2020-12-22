@@ -206,7 +206,10 @@ contract DebtAuctionInitialParameterSetter {
           require(val < THOUSAND, "DebtAuctionInitialParameterSetter/invalid-prot-token-premium");
           protocolTokenPremium = val;
         }
-        else if (parameter == "baseUpdateCallerReward") baseUpdateCallerReward = val;
+        else if (parameter == "baseUpdateCallerReward") {
+            require(val < maxUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-base-caller-reward");
+            baseUpdateCallerReward = val;
+        }
         else if (parameter == "maxUpdateCallerReward") {
           require(val > baseUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-max-reward");
           maxUpdateCallerReward = val;
