@@ -88,7 +88,7 @@ contract DebtAuctionInitialParameterSetter {
         require(minProtocolTokenAmountOffered_ > 0, "DebtAuctionInitialParameterSetter/null-min-prot-amt");
         require(protocolTokenPremium_ < THOUSAND, "DebtAuctionInitialParameterSetter/invalid-prot-token-premium");
         require(both(both(protocolTokenOrcl_ != address(0), systemCoinOrcl_ != address(0)), accountingEngine_ != address(0)), "DebtAuctionInitialParameterSetter/invalid-contract-address");
-        require(maxUpdateCallerReward_ > baseUpdateCallerReward_, "DebtAuctionInitialParameterSetter/invalid-max-reward");
+        require(maxUpdateCallerReward_ >= baseUpdateCallerReward_, "DebtAuctionInitialParameterSetter/invalid-max-reward");
         require(perSecondCallerRewardIncrease_ >= RAY, "DebtAuctionInitialParameterSetter/invalid-reward-increase");
         require(updateDelay_ > 0, "DebtAuctionInitialParameterSetter/null-update-delay");
         require(bidTargetValue_ > 0, "DebtAuctionInitialParameterSetter/invalid-bid-target-value");
