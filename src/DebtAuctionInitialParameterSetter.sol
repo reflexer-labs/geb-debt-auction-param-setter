@@ -1,4 +1,6 @@
-pragma solidity ^0.6.7;
+pragma solidity 0.6.7;
+
+import "geb-treasury-reimbursement/IncreasingTreasuryReimbursement.sol";
 
 abstract contract OracleLike {
     function getResultWithValidity() virtual external view returns (uint256, bool);
@@ -6,71 +8,26 @@ abstract contract OracleLike {
 abstract contract AccountingEngineLike {
     function modifyParameters(bytes32, uint256) virtual external;
 }
-abstract contract StabilityFeeTreasuryLike {
-    function getAllowance(address) virtual external view returns (uint256, uint256);
-    function systemCoin() virtual external view returns (address);
-    function pullFunds(address, address, uint256) virtual external;
-}
 
-contract DebtAuctionInitialParameterSetter {
-    // --- Auth ---
-    mapping (address => uint) public authorizedAccounts;
-    /**
-     * @notice Add auth to an account
-     * @param account Account to add auth to
-     */
-    function addAuthorization(address account) external isAuthorized {
-        authorizedAccounts[account] = 1;
-        emit AddAuthorization(msg.sender);
-    }
-    /**
-     * @notice Remove auth from an account
-     * @param account Account to remove auth from
-     */
-    function removeAuthorization(address account) external isAuthorized {
-        authorizedAccounts[account] = 0;
-        emit RemoveAuthorization(msg.sender);
-    }
-    /**
-    * @notice Checks whether msg.sender can call an authed function
-    **/
-    modifier isAuthorized {
-        require(authorizedAccounts[msg.sender] == 1, "DebtAuctionInitialParameterSetter/account-not-authorized");
-        _;
-    }
-
+contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
+    // --- Variables ---
     // Delay between updates after which the reward starts to increase
     uint256 public updateDelay;
-    // Starting reward for the feeReceiver
-    uint256 public baseUpdateCallerReward;                                                      // [wad]
-    // Max possible reward for the feeReceiver
-    uint256 public maxUpdateCallerReward;                                                       // [wad]
-    // Max delay taken into consideration when calculating the adjusted reward
-    uint256 public maxRewardIncreaseDelay;                                                      // [seconds]
-    // Rate applied to baseUpdateCallerReward every extra second passed beyond updateDelay seconds since the last update call
-    uint256 public perSecondCallerRewardIncrease;                                               // [ray]
     // Last timestamp when the median was updated
-    uint256 public lastUpdateTime;                                                              // [unix timestamp]
+    uint256 public lastUpdateTime;                                              // [unix timestamp]
     // Min amount of protocol tokens that should be offered in the auction
-    uint256 public minProtocolTokenAmountOffered;                                               // [wad]
+    uint256 public minProtocolTokenAmountOffered;                               // [wad]
     // Premium subtracted from the new amount of protocol tokens to be offered
-    uint256 public protocolTokenPremium;                                                        // [thousand]
+    uint256 public protocolTokenPremium;                                        // [thousand]
     // Value of the initial debt bid
-    uint256 public bidTargetValue;                                                              // [wad]
+    uint256 public bidTargetValue;                                              // [wad]
 
-    OracleLike               public protocolTokenOrcl;
-    OracleLike               public systemCoinOrcl;
-    AccountingEngineLike     public accountingEngine;
-    StabilityFeeTreasuryLike public treasury;
+    OracleLike           public protocolTokenOrcl;
+    OracleLike           public systemCoinOrcl;
+    AccountingEngineLike public accountingEngine;
 
     // --- Events ---
-    event ModifyParameters(bytes32 parameter, address addr);
-    event ModifyParameters(bytes32 parameter, uint256 data);
-    event AddAuthorization(address account);
     event SetDebtAuctionInitialParameters(uint256 debtAuctionBidSize, uint256 initialDebtAuctionMintedTokens);
-    event RemoveAuthorization(address account);
-    event RewardCaller(address feeReceiver, uint256 amount);
-    event FailRewardCaller(bytes revertReason, address finalFeeReceiver, uint256 reward);
 
     constructor(
       address protocolTokenOrcl_,
@@ -84,44 +41,29 @@ contract DebtAuctionInitialParameterSetter {
       uint256 minProtocolTokenAmountOffered_,
       uint256 protocolTokenPremium_,
       uint256 bidTargetValue_
-    ) public {
+    ) public IncreasingTreasuryReimbursement(treasury_, baseUpdateCallerReward_, maxUpdateCallerReward_, perSecondCallerRewardIncrease_) {
         require(minProtocolTokenAmountOffered_ > 0, "DebtAuctionInitialParameterSetter/null-min-prot-amt");
         require(protocolTokenPremium_ < THOUSAND, "DebtAuctionInitialParameterSetter/invalid-prot-token-premium");
         require(both(both(protocolTokenOrcl_ != address(0), systemCoinOrcl_ != address(0)), accountingEngine_ != address(0)), "DebtAuctionInitialParameterSetter/invalid-contract-address");
-        require(maxUpdateCallerReward_ >= baseUpdateCallerReward_, "DebtAuctionInitialParameterSetter/invalid-max-reward");
-        require(perSecondCallerRewardIncrease_ >= RAY, "DebtAuctionInitialParameterSetter/invalid-reward-increase");
         require(updateDelay_ > 0, "DebtAuctionInitialParameterSetter/null-update-delay");
         require(bidTargetValue_ > 0, "DebtAuctionInitialParameterSetter/invalid-bid-target-value");
-
-        authorizedAccounts[msg.sender] = 1;
 
         protocolTokenOrcl              = OracleLike(protocolTokenOrcl_);
         systemCoinOrcl                 = OracleLike(systemCoinOrcl_);
         accountingEngine               = AccountingEngineLike(accountingEngine_);
-        treasury                       = StabilityFeeTreasuryLike(treasury_);
 
         minProtocolTokenAmountOffered  = minProtocolTokenAmountOffered_;
         protocolTokenPremium           = protocolTokenPremium_;
-        baseUpdateCallerReward         = baseUpdateCallerReward_;
-        maxUpdateCallerReward          = maxUpdateCallerReward_;
-        perSecondCallerRewardIncrease  = perSecondCallerRewardIncrease_;
         updateDelay                    = updateDelay_;
         bidTargetValue                 = bidTargetValue_;
-        maxRewardIncreaseDelay         = uint(-1);
 
-        emit AddAuthorization(msg.sender);
         emit ModifyParameters(bytes32("protocolTokenOrcl"), protocolTokenOrcl_);
         emit ModifyParameters(bytes32("systemCoinOrcl"), systemCoinOrcl_);
         emit ModifyParameters(bytes32("accountingEngine"), accountingEngine_);
-        emit ModifyParameters(bytes32("treasury"), treasury_);
         emit ModifyParameters(bytes32("bidTargetValue"), bidTargetValue);
         emit ModifyParameters(bytes32("minProtocolTokenAmountOffered"), minProtocolTokenAmountOffered);
         emit ModifyParameters(bytes32("protocolTokenPremium"), protocolTokenPremium);
-        emit ModifyParameters(bytes32("maxRewardIncreaseDelay"), uint(-1));
         emit ModifyParameters(bytes32("updateDelay"), updateDelay);
-        emit ModifyParameters(bytes32("baseUpdateCallerReward"), baseUpdateCallerReward);
-        emit ModifyParameters(bytes32("maxUpdateCallerReward"), maxUpdateCallerReward);
-        emit ModifyParameters(bytes32("perSecondCallerRewardIncrease"), perSecondCallerRewardIncrease);
     }
 
     // --- Boolean Logic ---
@@ -133,55 +75,11 @@ contract DebtAuctionInitialParameterSetter {
     }
 
     // --- Math ---
-    uint internal constant WAD      = 10 ** 18;
-    uint internal constant RAY      = 10 ** 27;
     uint internal constant THOUSAND = 10 ** 3;
-    function minimum(uint x, uint y) internal pure returns (uint z) {
-        z = (x <= y) ? x : y;
-    }
-    function addition(uint x, uint y) internal pure returns (uint z) {
-        z = x + y;
-        require(z >= x);
-    }
-    function subtract(uint x, uint y) internal pure returns (uint z) {
-        require((z = x - y) <= x);
-    }
-    function multiply(uint x, uint y) internal pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x);
-    }
     function divide(uint x, uint y) internal pure returns (uint z) {
         require(y > 0);
         z = x / y;
         require(z <= x);
-    }
-    function wmultiply(uint x, uint y) internal pure returns (uint z) {
-        z = multiply(x, y) / WAD;
-    }
-    function rmultiply(uint x, uint y) internal pure returns (uint z) {
-        z = multiply(x, y) / RAY;
-    }
-    function rpower(uint x, uint n, uint base) internal pure returns (uint z) {
-        assembly {
-            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
-            default {
-                switch mod(n, 2) case 0 { z := base } default { z := x }
-                let half := div(base, 2)  // for rounding.
-                for { n := div(n, 2) } n { n := div(n,2) } {
-                    let xx := mul(x, x)
-                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
-                    let xxRound := add(xx, half)
-                    if lt(xxRound, xx) { revert(0,0) }
-                    x := div(xxRound, base)
-                    if mod(n,2) {
-                        let zx := mul(z, x)
-                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
-                        let zxRound := add(zx, half)
-                        if lt(zxRound, zx) { revert(0,0) }
-                        z := div(zxRound, base)
-                    }
-                }
-            }
-        }
     }
 
     // --- Administration ---
@@ -238,43 +136,6 @@ contract DebtAuctionInitialParameterSetter {
         emit ModifyParameters(parameter, val);
     }
 
-    // --- Treasury Utils ---
-    function treasuryAllowance() public view returns (uint256) {
-        (uint total, uint perBlock) = treasury.getAllowance(address(this));
-        return minimum(total, perBlock);
-    }
-    function getCallerReward() public view returns (uint256) {
-        if (lastUpdateTime == 0) return baseUpdateCallerReward;
-        uint256 timeElapsed = subtract(now, lastUpdateTime);
-        if (timeElapsed < updateDelay) {
-            return 0;
-        }
-        uint256 adjustedTime = subtract(timeElapsed, updateDelay);
-        uint256 maxReward    = minimum(maxUpdateCallerReward, treasuryAllowance() / RAY);
-        if (adjustedTime > maxRewardIncreaseDelay) {
-            return maxReward;
-        }
-        uint256 baseReward   = baseUpdateCallerReward;
-        if (adjustedTime > 0) {
-            baseReward = rmultiply(rpower(perSecondCallerRewardIncrease, adjustedTime, RAY), baseReward);
-        }
-        if (baseReward > maxReward) {
-            baseReward = maxReward;
-        }
-        return baseReward;
-    }
-    function rewardCaller(address proposedFeeReceiver, uint256 reward) internal {
-        if (address(treasury) == proposedFeeReceiver) return;
-        if (either(address(treasury) == address(0), reward == 0)) return;
-        address finalFeeReceiver = (proposedFeeReceiver == address(0)) ? msg.sender : proposedFeeReceiver;
-        try treasury.pullFunds(finalFeeReceiver, treasury.systemCoin(), reward) {
-            emit RewardCaller(finalFeeReceiver, reward);
-        }
-        catch(bytes memory revertReason) {
-            emit FailRewardCaller(revertReason, finalFeeReceiver, reward);
-        }
-    }
-
     // --- Setter ---
     function getNewDebtBid() external view returns (uint256 debtAuctionBidSize) {
         // Get token price
@@ -317,7 +178,7 @@ contract DebtAuctionInitialParameterSetter {
         // Check delay between calls
         require(either(subtract(now, lastUpdateTime) >= updateDelay, lastUpdateTime == 0), "DebtAuctionInitialParameterSetter/wait-more");
         // Get the caller's reward
-        uint256 callerReward = getCallerReward();
+        uint256 callerReward = getCallerReward(lastUpdateTime, updateDelay);
         // Store the timestamp of the update
         lastUpdateTime = now;
 
