@@ -52,6 +52,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         systemCoinOrcl                 = OracleLike(systemCoinOrcl_);
         accountingEngine               = AccountingEngineLike(accountingEngine_);
 
+        lastUpdateTime                 = now;
         minProtocolTokenAmountOffered  = minProtocolTokenAmountOffered_;
         protocolTokenPremium           = protocolTokenPremium_;
         updateDelay                    = updateDelay_;
@@ -69,9 +70,6 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     // --- Boolean Logic ---
     function both(bool x, bool y) internal pure returns (bool z) {
       assembly{ z := and(x, y)}
-    }
-    function either(bool x, bool y) internal pure returns (bool z) {
-        assembly{ z := or(x, y)}
     }
 
     // --- Math ---
