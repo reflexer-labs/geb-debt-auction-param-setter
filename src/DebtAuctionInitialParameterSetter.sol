@@ -52,7 +52,6 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         systemCoinOrcl                 = OracleLike(systemCoinOrcl_);
         accountingEngine               = AccountingEngineLike(accountingEngine_);
 
-        lastUpdateTime                 = now;
         minProtocolTokenAmountOffered  = minProtocolTokenAmountOffered_;
         protocolTokenPremium           = protocolTokenPremium_;
         updateDelay                    = updateDelay_;
