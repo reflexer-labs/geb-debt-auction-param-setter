@@ -22,8 +22,11 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     // Value of the initial debt bid
     uint256 public bidTargetValue;                                              // [wad]
 
+    // The protocol token oracle
     OracleLike           public protocolTokenOrcl;
+    // The system coin oracle
     OracleLike           public systemCoinOrcl;
+    // The accounting engine contract
     AccountingEngineLike public accountingEngine;
 
     // --- Events ---
@@ -80,6 +83,11 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     }
 
     // --- Administration ---
+    /*
+    * @notice Modify the address of a contract integrated with this setter
+    * @param parameter Name of the contract to set a new address for
+    * @param addr The new address
+    */
     function modifyParameters(bytes32 parameter, address addr) external isAuthorized {
         require(addr != address(0), "DebtAuctionInitialParameterSetter/null-addr");
         if (parameter == "protocolTokenOrcl") protocolTokenOrcl = OracleLike(addr);
@@ -92,6 +100,11 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         else revert("DebtAuctionInitialParameterSetter/modify-unrecognized-param");
         emit ModifyParameters(parameter, addr);
     }
+    /*
+    * @notice Modify a uint256 parameter
+    * @param parameter Name of the parameter
+    * @param addr The new parameter value
+    */
     function modifyParameters(bytes32 parameter, uint256 val) external isAuthorized {
         if (parameter == "minProtocolTokenAmountOffered") {
           require(val > 0, "DebtAuctionInitialParameterSetter/null-min-prot-amt");
@@ -134,6 +147,10 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     }
 
     // --- Setter ---
+    /*
+    * @notify View function that returns the new, initial debt auction bid
+    * @returns debtAuctionBidSize The new, initial debt auction bid
+    */
     function getNewDebtBid() external view returns (uint256 debtAuctionBidSize) {
         // Get token price
         (uint256 systemCoinPrice, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
@@ -145,6 +162,10 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
           debtAuctionBidSize = RAY;
         }
     }
+    /*
+    * @notify View function that returns the initial amount of protocol tokens which should be offered in a debt auction
+    * @returns debtAuctionMintedTokens The initial amount of protocol tokens that should be offered in a debt auction
+    */
     function getRawProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
@@ -158,6 +179,10 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
           debtAuctionMintedTokens = minProtocolTokenAmountOffered;
         }
     }
+    /*
+    * @notify View function that returns the initial amount of protocol tokens with a premium added on top
+    * @returns debtAuctionMintedTokens The initial amount of protocol tokens with a premium added on top
+    */
     function getPremiumAdjustedProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
@@ -171,6 +196,10 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
           debtAuctionMintedTokens = minProtocolTokenAmountOffered;
         }
     }
+    /*
+    * @notify Set the new debtAuctionBidSize and initialDebtAuctionMintedTokens inside the AccountingEngine
+    * @param feeReceiver The address that will receive the reward for setting new params
+    */
     function setDebtAuctionInitialParameters(address feeReceiver) external {
         // Check delay between calls
         require(either(subtract(now, lastUpdateTime) >= updateDelay, lastUpdateTime == 0), "DebtAuctionInitialParameterSetter/wait-more");
@@ -215,7 +244,6 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         // Pay the caller for updating the rate
         rewardCaller(feeReceiver, callerReward);
     }
-
     /*
     * @notice Manually set initial debt auction parameters
     * @param debtAuctionBidSize The initial debt auction bid size
