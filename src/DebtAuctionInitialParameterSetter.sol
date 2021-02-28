@@ -115,11 +115,11 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
           protocolTokenPremium = val;
         }
         else if (parameter == "baseUpdateCallerReward") {
-            require(val < maxUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-base-caller-reward");
+            require(val <= maxUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-base-caller-reward");
             baseUpdateCallerReward = val;
         }
         else if (parameter == "maxUpdateCallerReward") {
-          require(val > baseUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-max-reward");
+          require(val >= baseUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-max-reward");
           maxUpdateCallerReward = val;
         }
         else if (parameter == "perSecondCallerRewardIncrease") {
