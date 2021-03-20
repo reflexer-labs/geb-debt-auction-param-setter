@@ -1,6 +1,6 @@
 pragma solidity 0.6.7;
 
-import "geb-treasury-reimbursement/IncreasingTreasuryReimbursement.sol";
+import "geb-treasury-reimbursement/reimbursement/IncreasingTreasuryReimbursement.sol";
 
 abstract contract OracleLike {
     function getResultWithValidity() virtual external view returns (uint256, bool);
@@ -77,7 +77,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     // --- Math ---
     uint internal constant THOUSAND = 10 ** 3;
     function divide(uint x, uint y) internal pure returns (uint z) {
-        require(y > 0);
+        require(y > 0, "divide-null-y");
         z = x / y;
         require(z <= x);
     }
