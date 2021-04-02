@@ -102,6 +102,20 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
         treasury.setPerBlockAllowance(address(setter), 10E45);
     }
 
+    function test_set_debt_auction_gas() public {
+        setter.setDebtAuctionInitialParameters(address(this));
+    }
+
+    function test_set_debt_auction_gas_multiple() public {
+        uint gas;
+        for (uint i = 0; i < 10; i++) {
+            gas = gasleft();
+            setter.setDebtAuctionInitialParameters(address(this));
+            emit log_named_uint("gas", gas -gasleft());
+            hevm.warp(now + setter.updateDelay());
+        }
+    }
+
     function test_setup() public {
         assertEq(setter.authorizedAccounts(address(this)), 1);
 
