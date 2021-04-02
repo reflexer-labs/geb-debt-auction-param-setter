@@ -38,16 +38,6 @@ contract Feed {
     }
 }
 
-// contract AccountingEngine {
-//     uint256 public initialDebtAuctionMintedTokens;
-//     uint256 public debtAuctionBidSize;
-
-//     function modifyParameters(bytes32 parameter, uint data) external {
-//         if (parameter == "debtAuctionBidSize") debtAuctionBidSize = data;
-//         else if (parameter == "initialDebtAuctionMintedTokens") initialDebtAuctionMintedTokens = data;
-//     }
-// }
-
 contract DebtAuctionInitialParameterSetterTest is GebDeployTestBase {
 
     Feed sysCoinFeed;
