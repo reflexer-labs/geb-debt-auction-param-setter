@@ -122,7 +122,6 @@ Seed: 8954960791065063548
 ```
 
 
-
 #### Conclusion: No exceptions found, all overflows are expected (from teh public functions in GebMath).
 
 
@@ -130,14 +129,26 @@ Seed: 8954960791065063548
 
 In this case we setup the setter, and check properties.
 
-Here we are not looking for bounds, but instead checking the properties that either should remain constant, or that move as the auction evolves:
+Here we are not looking for bounds, but instead checking the properties that either should remain constant:
 
+- debtFloor bounds and value
+- debtFloor bounds and value
+- debtFloor bounds and value
 - debtFloor bounds and value
 
 These properties are verified in between all calls.
 
 ```
+Analyzing contract: /Users/fabio/Documents/reflexer/geb-debt-auction-param-setter/src/test/fuzz/DebtAuctionInitialParameterSetterFuzz.sol:Fuzz
+echidna_debt_auction_bid_size_bound: passed! 🎉
+echidna_initial_debt_auction_minted_tokens: failed!💥
+  Call sequence:
+    fuzzParams(3,1,1,1518)
 
+echidna_initial_debt_auction_minted_tokens_bound: passed! 🎉
+echidna_debt_auction_bid_size: passed! 🎉
+
+Seed: -4159651621258571812
 ```
 
-#### Conclusion: TBD
+#### Conclusion: getPremiumAdjustedProtocolTokenAmount does not match setDebtAuctionInitialParameters, TBD

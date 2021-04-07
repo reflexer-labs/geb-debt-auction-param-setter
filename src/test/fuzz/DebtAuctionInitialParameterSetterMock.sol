@@ -151,7 +151,7 @@ contract DebtAuctionInitialParameterSetterMock is IncreasingTreasuryReimbursemen
     * @notify View function that returns the new, initial debt auction bid
     * @returns debtAuctionBidSize The new, initial debt auction bid
     */
-    function getNewDebtBid() external view returns (uint256 debtAuctionBidSize) {
+    function getNewDebtBid() public view returns (uint256 debtAuctionBidSize) {
         // Get token price
         (uint256 systemCoinPrice, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
         require(both(systemCoinPrice > 0, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-price");
@@ -166,7 +166,7 @@ contract DebtAuctionInitialParameterSetterMock is IncreasingTreasuryReimbursemen
     * @notify View function that returns the initial amount of protocol tokens which should be offered in a debt auction
     * @returns debtAuctionMintedTokens The initial amount of protocol tokens that should be offered in a debt auction
     */
-    function getRawProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
+    function getRawProtocolTokenAmount() public view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
@@ -183,7 +183,7 @@ contract DebtAuctionInitialParameterSetterMock is IncreasingTreasuryReimbursemen
     * @notify View function that returns the initial amount of protocol tokens with a premium added on top
     * @returns debtAuctionMintedTokens The initial amount of protocol tokens with a premium added on top
     */
-    function getPremiumAdjustedProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
+    function getPremiumAdjustedProtocolTokenAmount() public view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
@@ -200,7 +200,7 @@ contract DebtAuctionInitialParameterSetterMock is IncreasingTreasuryReimbursemen
     * @notify Set the new debtAuctionBidSize and initialDebtAuctionMintedTokens inside the AccountingEngine
     * @param feeReceiver The address that will receive the reward for setting new params
     */
-    function setDebtAuctionInitialParameters(address feeReceiver) external {
+    function setDebtAuctionInitialParameters(address feeReceiver) public {
         // Check delay between calls
         require(either(subtract(now, lastUpdateTime) >= updateDelay, lastUpdateTime == 0), "DebtAuctionInitialParameterSetter/wait-more");
         // Get the caller's reward
