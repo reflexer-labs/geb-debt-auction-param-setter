@@ -223,6 +223,9 @@ contract DebtAuctionInitialParameterSetterMock is IncreasingTreasuryReimbursemen
         // Apply the premium
         initialDebtAuctionMintedTokens = divide(multiply(initialDebtAuctionMintedTokens, protocolTokenPremium), THOUSAND);
 
+
+        // uint initialDebtAuctionMintedTokens = divide(divide(multiply(multiply(bidTargetValue, WAD), protocolTokenPremium), protocolTknPrice), THOUSAND);
+
         // Take into account the minimum amount of protocol tokens to offer
         if (initialDebtAuctionMintedTokens < minProtocolTokenAmountOffered) {
           initialDebtAuctionMintedTokens = minProtocolTokenAmountOffered;

@@ -94,8 +94,14 @@ contract FuzzBounds is DebtAuctionInitialParameterSetterMock {
     function fuzzParams(uint protPrice, uint coinPrice, uint _bidTargetValue, uint _protocolTokenPremium) public {
         Feed(address(protocolTokenOrcl)).set_val(protPrice);
         Feed(address(systemCoinOrcl)).set_val(coinPrice);
-        bidTargetValue = _bidTargetValue;
-        protocolTokenPremium = _protocolTokenPremium;
+        bidTargetValue = (_bidTargetValue == 0) ? 1 : _bidTargetValue;
+        protocolTokenPremium = range(_protocolTokenPremium, 1, 999);
+    }
+
+    function range(uint a, uint min, uint max) public pure returns (uint) {
+        if (a <= min) return min;
+        if (a >= max) return max;
+        return a;
     }
 }
 
@@ -127,11 +133,17 @@ contract Fuzz is DebtAuctionInitialParameterSetterMock {
     }
 
     function fuzzParams(uint protPrice, uint coinPrice, uint _bidTargetValue, uint _protocolTokenPremium) public {
-        Feed(address(protocolTokenOrcl)).set_val(protPrice);
-        Feed(address(systemCoinOrcl)).set_val(coinPrice);
-        bidTargetValue = _bidTargetValue;
-        protocolTokenPremium = _protocolTokenPremium;
+        Feed(address(protocolTokenOrcl)).set_val(range(protPrice, 1, 10e27));
+        Feed(address(systemCoinOrcl)).set_val(range(coinPrice, 1, 10e27));
+        bidTargetValue = range(_bidTargetValue, 1, 10000000 ether); // 10mm
+        protocolTokenPremium = range(_bidTargetValue, 0, 999); // full acceptable range
         setDebtAuctionInitialParameters(address(0xdeadbeef));
+    }
+
+    function range(uint a, uint min, uint max) public pure returns (uint) {
+        if (a <= min) return min;
+        if (a >= max) return max;
+        return a;
     }
 
     // properties
@@ -144,7 +156,7 @@ contract Fuzz is DebtAuctionInitialParameterSetterMock {
     }
 
     function echidna_initial_debt_auction_minted_tokens() public returns (bool) {
-        return (AccountingEngine(address(accountingEngine)).initialDebtAuctionMintedTokens() == getPremiumAdjustedProtocolTokenAmount() || lastUpdateTime == 0);
+        return (AccountingEngine(address(accountingEngine)).initialDebtAuctionMintedTokens() / 100 == getPremiumAdjustedProtocolTokenAmount() / 100 || lastUpdateTime == 0);
     }
 
     function echidna_initial_debt_auction_minted_tokens_bound() public returns (bool) {
