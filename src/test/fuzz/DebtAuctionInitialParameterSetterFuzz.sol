@@ -1,6 +1,6 @@
 pragma solidity 0.6.7;
 
-import "../Mock/MockTreasury.sol";
+import "../mock/MockTreasury.sol";
 import "./DebtAuctionInitialParameterSetterMock.sol";
 
 contract AccountingEngine {
