@@ -156,7 +156,7 @@ contract Fuzz is DebtAuctionInitialParameterSetterMock {
     }
 
     function echidna_initial_debt_auction_minted_tokens() public returns (bool) {
-        return (AccountingEngine(address(accountingEngine)).initialDebtAuctionMintedTokens() / 100 == getPremiumAdjustedProtocolTokenAmount() / 100 || lastUpdateTime == 0);
+        return (AccountingEngine(address(accountingEngine)).initialDebtAuctionMintedTokens() == getPremiumAdjustedProtocolTokenAmount() || lastUpdateTime == 0);
     }
 
     function echidna_initial_debt_auction_minted_tokens_bound() public returns (bool) {

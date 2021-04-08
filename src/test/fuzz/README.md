@@ -188,11 +188,7 @@ echidna_initial_debt_auction_minted_tokens: passed! 🎉
 echidna_initial_debt_auction_minted_tokens_bound: passed! 🎉
 echidna_debt_auction_bid_size: passed! 🎉
 
-Seed: 4523568715541225461
+Seed: -8306747842532670008
 ```
-
-The formula used to calulate ```initialDebtAuctionMintedTokens``` sightly differs between ```getPremiumAdjustedProtocolTokenAmount()``` and ```setDebtAuctionInitialParameters()```. This results in minor loss of precision (only two last digits affected using sane but generous ranges for the parameters) due to division rounding.
-
-Another side effect is that the bound of ```setDebtAuctionInitialParameters()``` is larger than the one in ```getPremiumAdjustedProtocolTokenAmount()``` (which is a positive thing since it's the one that changes state, and overflowing any of the calculations results in DoS).
 
 #### Conclusion: No exceptions found
