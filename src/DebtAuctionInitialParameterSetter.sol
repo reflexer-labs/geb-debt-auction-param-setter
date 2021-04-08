@@ -189,7 +189,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the amont of protocol tokens without the premium and apply it
-        debtAuctionMintedTokens = divide(divide(multiply(multiply(bidTargetValue, WAD), protocolTokenPremium), protocolTknPrice), THOUSAND);
+        debtAuctionMintedTokens = divide(multiply(divide(multiply(bidTargetValue, WAD), protocolTknPrice), protocolTokenPremium), THOUSAND);
 
         // Take into account the minimum amount of protocol tokens to offer
         if (debtAuctionMintedTokens < minProtocolTokenAmountOffered) {
