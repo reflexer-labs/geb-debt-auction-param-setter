@@ -31,20 +31,24 @@ In this test we want failures, as they will show us what are the bounds in which
 Failures flag where overflows happen, and should be compared to expected inputs (to avoid overflows frm causing DoS).
 
 ```
-Analyzing contract: /Users/fabio/Documents/reflexer/geb-debt-auction-param-setter/src/test/fuzz/DebtAuctionInitialParameterSetterFuzz.sol:FuzzBounds
+Analyzing contract: /Users/fabio/Documents/reflexer/geb-debt-auction-param-setter/src/test/fuzz/DebtAuctionInitialParameterSetterFuzz.sol:Fuzz
+echidna_debt_auction_bid_size_bound: passed! 🎉
+echidna_initial_debt_auction_minted_tokens: passed! 🎉
+echidna_initial_debt_auction_minted_tokens_bound: passed! 🎉
+echidna_debt_auction_bid_size: passed! 🎉
 assertion in fuzzParams: passed! 🎉
 assertion in rmultiply: failed!💥
   Call sequence:
-    rmultiply(1886862567290639455494083118563938007875568565228677809922401407928,61432131875)
+    rmultiply(8941294071242991741013141623006020698352,12970519921988971311690354564591009167)
 
 assertion in ray: failed!💥
   Call sequence:
-    ray(115838625957299645116210531330288243514068797874068363881394747195438)
+    ray(115795553445168649141101025579135698635404286616916628467799335108554)
 
 assertion in bidTargetValue: passed! 🎉
 assertion in multiply: failed!💥
   Call sequence:
-    multiply(84738433903651669835086864455560631118,1373660203072137022014593776562802845924)
+    multiply(2725066548825930874958881611933156817,43109916273908539182156118718506260751084)
 
 assertion in protocolTokenPremium: passed! 🎉
 assertion in baseUpdateCallerReward: passed! 🎉
@@ -54,7 +58,7 @@ assertion in treasuryAllowance: passed! 🎉
 assertion in addAuthorization: passed! 🎉
 assertion in wmultiply: failed!💥
   Call sequence:
-    wmultiply(6,19320937987666812181372576059885341284906746889896447637539555517467584779627)
+    wmultiply(40639036560460496253109311379785551116901904830235584217005880217874725994,2864)
 
 assertion in subtract: failed!💥
   Call sequence:
@@ -63,18 +67,14 @@ assertion in subtract: failed!💥
 assertion in perSecondCallerRewardIncrease: passed! 🎉
 assertion in rad: failed!💥
   Call sequence:
-    rad(115797647851213479584784131810300845157547487814836)
+    rad(115794899141511153324851619876786844637068797117709)
 
 assertion in manualSetDebtAuctionParameters: passed! 🎉
 assertion in minProtocolTokenAmountOffered: passed! 🎉
-assertion in getPremiumAdjustedProtocolTokenAmount: failed!💥
-  Call sequence:
-    fuzzParams(2,7696469028944939096644330046923983291495366604588268,115926436795955985160419997568026068982163811880113870634,120642387219613518400626400807383327335171361243)
-    getPremiumAdjustedProtocolTokenAmount()
-
+assertion in getPremiumAdjustedProtocolTokenAmount: passed! 🎉
 assertion in addition: failed!💥
   Call sequence:
-    addition(69283910323076536737177054055878245993002006983063280384022497764255494804394,47080639969898934449045348269198192176182836801942186854009601028867546925623)
+    addition(74148970973594851740571204185379308733342590580922301826623562031989813614067,42050981052931150353965577213698609541419515978951639067457277862800188809577)
 
 assertion in RAY: passed! 🎉
 assertion in updateDelay: passed! 🎉
@@ -82,44 +82,32 @@ assertion in treasury: passed! 🎉
 assertion in modifyParameters: passed! 🎉
 assertion in maxUpdateCallerReward: passed! 🎉
 assertion in WAD: passed! 🎉
-assertion in getRawProtocolTokenAmount: failed!💥
-  Call sequence:
-    fuzzParams(12363724300,488908949313535191735025544936183155531510918229770825230,115799820230258254532230319774482720304531772204312158718461,1504229331527011360703020412954109405186050922765518291569)
-    getRawProtocolTokenAmount()
-
+assertion in getRawProtocolTokenAmount: passed! 🎉
 assertion in removeAuthorization: passed! 🎉
 assertion in accountingEngine: passed! 🎉
 assertion in protocolTokenOrcl: passed! 🎉
 assertion in rdivide: failed!💥
   Call sequence:
-    rdivide(115801293773509174099879556091275542391650331378185,15306824106411220738589132040698562060097783)
+    rdivide(115825465736981544347031552090208817915756752051042,780745183397972890879065050819452740316697669610652)
 
-assertion in getNewDebtBid: failed!💥
-  Call sequence:
-    fuzzParams(17657843745536337527512516605525074,1589585014227748301395367,115804424984310826176615835225343,0)
-    getNewDebtBid()
-
-assertion in setDebtAuctionInitialParameters: failed!💥
-  Call sequence:
-    fuzzParams(3614393598515173946989974365,20657823283493783720108499,115803057612405542733808860688740,0)
-    setDebtAuctionInitialParameters(0x0)
-
+assertion in getNewDebtBid: passed! 🎉
+assertion in setDebtAuctionInitialParameters: passed! 🎉
 assertion in systemCoinOrcl: passed! 🎉
 assertion in lastUpdateTime: passed! 🎉
 assertion in range: passed! 🎉
 assertion in rpower: failed!💥
   Call sequence:
-    rpower(4,128,1)
+    rpower(340300460364730518656359006319414565551,329460461862177295882379727161694,0)
 
 assertion in minimum: passed! 🎉
 assertion in getCallerReward: passed! 🎉
 assertion in wdivide: failed!💥
   Call sequence:
-    wdivide(0,0)
+    wdivide(115814166400482211444885527025002270214358626434757228712349,79871747325669261343077702811224544011127738076672493068677458)
 
 assertion in modifyParameters: passed! 🎉
 
-Seed: -4391526086924522122
+Seed: 2825694286002874683
 ```
 
 Most of these failures are well known (math functions), we will focus on the ones specific to this contract:
@@ -134,9 +122,21 @@ assertion in getPremiumAdjustedProtocolTokenAmount: failed!💥
 Prot Price of 2, bid target value of 115926436795955985160419997568026068982.163811880113870634 and protocolTokenPremium of 999
 (coin price does not affect it).
 
-Here the fuzzer reduced the prot price to two, but what actually causes the overflow are the consecutive multiplications up front (bidTargetValue * WAD * protocolTokenPremium). This bound could be increased by reordering the arythmetic operations (the way they are in setDebtAuctionInitialParameters()), with the added benefit of alighning both results (though diferrences are minimal, refer to the next test for more details).
+Here the fuzzer reduced the prot price to two, but what actually causes the overflow are the consecutive multiplications up front (bidTargetValue * WAD * protocolTokenPremium). This bound could be increased by reordering the arythmetic operations (the way they are in ```setDebtAuctionInitialParameters()```), with the added benefit of alighning both results (though diferrences are minimal, refer to the next test for more details).
 
-Bounds are plentiful still even with this limitation.
+We adjusted the formula and reran the script with the result below:
+
+```
+getPremiumAdjustedProtocolTokenAmount: passed! 🎉
+assertion in addition: failed!💥
+  Call sequence:
+    addition(74148970973594851740571204185379308733342590580922301826623562031989813614067,42050981052931150353965577213698609541419515978951639067457277862800188809577)
+```
+
+Pro price: 74148970973594851740571204185379308733,342,590,580,922,301,826,623.562031989813614067
+bid target value: 42050981052931150353965577213698609541,419,515,978,951,639,067,457.277862800188809577
+
+Bounds increased consideraly, and now the formula matches the one in ```setDebtAuctionInitialParameters()```.
 
 ```
 assertion in getRawProtocolTokenAmount: failed!💥
