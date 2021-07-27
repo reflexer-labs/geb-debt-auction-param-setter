@@ -1,15 +1,15 @@
 pragma solidity 0.6.7;
 
-import "geb-treasury-reimbursement/reimbursement/single/IncreasingTreasuryReimbursement.sol";
+import "geb-treasury-reimbursement/reimbursement/multi/MultiIncreasingTreasuryReimbursement.sol";
 
 abstract contract OracleLike {
     function getResultWithValidity() virtual external view returns (uint256, bool);
 }
 abstract contract AccountingEngineLike {
-    function modifyParameters(bytes32, uint256) virtual external;
+    function modifyParameters(bytes32, bytes32, uint256) virtual external;
 }
 
-contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
+contract MultiDebtAuctionInitialParameterSetter is MultiIncreasingTreasuryReimbursement {
     // --- Variables ---
     // Delay between updates after which the reward starts to increase
     uint256 public updateDelay;
@@ -33,6 +33,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     event SetDebtAuctionInitialParameters(uint256 debtAuctionBidSize, uint256 initialDebtAuctionMintedTokens);
 
     constructor(
+      bytes32 coinName_,
       address protocolTokenOrcl_,
       address systemCoinOrcl_,
       address accountingEngine_,
@@ -44,12 +45,12 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
       uint256 minProtocolTokenAmountOffered_,
       uint256 protocolTokenPremium_,
       uint256 bidTargetValue_
-    ) public IncreasingTreasuryReimbursement(treasury_, baseUpdateCallerReward_, maxUpdateCallerReward_, perSecondCallerRewardIncrease_) {
-        require(minProtocolTokenAmountOffered_ > 0, "DebtAuctionInitialParameterSetter/null-min-prot-amt");
-        require(protocolTokenPremium_ < THOUSAND, "DebtAuctionInitialParameterSetter/invalid-prot-token-premium");
-        require(both(both(protocolTokenOrcl_ != address(0), systemCoinOrcl_ != address(0)), accountingEngine_ != address(0)), "DebtAuctionInitialParameterSetter/invalid-contract-address");
-        require(updateDelay_ > 0, "DebtAuctionInitialParameterSetter/null-update-delay");
-        require(bidTargetValue_ > 0, "DebtAuctionInitialParameterSetter/invalid-bid-target-value");
+    ) public MultiIncreasingTreasuryReimbursement(coinName_, treasury_, baseUpdateCallerReward_, maxUpdateCallerReward_, perSecondCallerRewardIncrease_) {
+        require(minProtocolTokenAmountOffered_ > 0, "MultiDebtAuctionInitialParameterSetter/null-min-prot-amt");
+        require(protocolTokenPremium_ < THOUSAND, "MultiDebtAuctionInitialParameterSetter/invalid-prot-token-premium");
+        require(both(both(protocolTokenOrcl_ != address(0), systemCoinOrcl_ != address(0)), accountingEngine_ != address(0)), "MultiDebtAuctionInitialParameterSetter/invalid-contract-address");
+        require(updateDelay_ > 0, "MultiDebtAuctionInitialParameterSetter/null-update-delay");
+        require(bidTargetValue_ > 0, "MultiDebtAuctionInitialParameterSetter/invalid-bid-target-value");
 
         protocolTokenOrcl              = OracleLike(protocolTokenOrcl_);
         systemCoinOrcl                 = OracleLike(systemCoinOrcl_);
@@ -89,15 +90,15 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     * @param addr The new address
     */
     function modifyParameters(bytes32 parameter, address addr) external isAuthorized {
-        require(addr != address(0), "DebtAuctionInitialParameterSetter/null-addr");
+        require(addr != address(0), "MultiDebtAuctionInitialParameterSetter/null-addr");
         if (parameter == "protocolTokenOrcl") protocolTokenOrcl = OracleLike(addr);
         else if (parameter == "systemCoinOrcl") systemCoinOrcl = OracleLike(addr);
         else if (parameter == "accountingEngine") accountingEngine = AccountingEngineLike(addr);
         else if (parameter == "treasury") {
-          require(StabilityFeeTreasuryLike(addr).systemCoin() != address(0), "DebtAuctionInitialParameterSetter/treasury-coin-not-set");
+          require(StabilityFeeTreasuryLike(addr).systemCoin(coinName) != address(0), "MultiDebtAuctionInitialParameterSetter/treasury-coin-not-set");
       	  treasury = StabilityFeeTreasuryLike(addr);
         }
-        else revert("DebtAuctionInitialParameterSetter/modify-unrecognized-param");
+        else revert("MultiDebtAuctionInitialParameterSetter/modify-unrecognized-param");
         emit ModifyParameters(parameter, addr);
     }
     /*
@@ -107,42 +108,42 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     */
     function modifyParameters(bytes32 parameter, uint256 val) external isAuthorized {
         if (parameter == "minProtocolTokenAmountOffered") {
-          require(val > 0, "DebtAuctionInitialParameterSetter/null-min-prot-amt");
+          require(val > 0, "MultiDebtAuctionInitialParameterSetter/null-min-prot-amt");
           minProtocolTokenAmountOffered = val;
         }
         else if (parameter == "protocolTokenPremium") {
-          require(val < THOUSAND, "DebtAuctionInitialParameterSetter/invalid-prot-token-premium");
+          require(val < THOUSAND, "MultiDebtAuctionInitialParameterSetter/invalid-prot-token-premium");
           protocolTokenPremium = val;
         }
         else if (parameter == "baseUpdateCallerReward") {
-            require(val <= maxUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-base-caller-reward");
+            require(val <= maxUpdateCallerReward, "MultiDebtAuctionInitialParameterSetter/invalid-base-caller-reward");
             baseUpdateCallerReward = val;
         }
         else if (parameter == "maxUpdateCallerReward") {
-          require(val >= baseUpdateCallerReward, "DebtAuctionInitialParameterSetter/invalid-max-reward");
+          require(val >= baseUpdateCallerReward, "MultiDebtAuctionInitialParameterSetter/invalid-max-reward");
           maxUpdateCallerReward = val;
         }
         else if (parameter == "perSecondCallerRewardIncrease") {
-          require(val >= RAY, "DebtAuctionInitialParameterSetter/invalid-reward-increase");
+          require(val >= RAY, "MultiDebtAuctionInitialParameterSetter/invalid-reward-increase");
           perSecondCallerRewardIncrease = val;
         }
         else if (parameter == "maxRewardIncreaseDelay") {
-          require(val > 0, "DebtAuctionInitialParameterSetter/invalid-max-increase-delay");
+          require(val > 0, "MultiDebtAuctionInitialParameterSetter/invalid-max-increase-delay");
           maxRewardIncreaseDelay = val;
         }
         else if (parameter == "updateDelay") {
-          require(val > 0, "DebtAuctionInitialParameterSetter/null-update-delay");
+          require(val > 0, "MultiDebtAuctionInitialParameterSetter/null-update-delay");
           updateDelay = val;
         }
         else if (parameter == "bidTargetValue") {
-          require(val > 0, "DebtAuctionInitialParameterSetter/invalid-bid-target-value");
+          require(val > 0, "MultiDebtAuctionInitialParameterSetter/invalid-bid-target-value");
           bidTargetValue = val;
         }
         else if (parameter == "lastUpdateTime") {
-          require(val > now, "DebtAuctionInitialParameterSetter/");
+          require(val > now, "MultiDebtAuctionInitialParameterSetter/");
           lastUpdateTime = val;
         }
-        else revert("DebtAuctionInitialParameterSetter/modify-unrecognized-param");
+        else revert("MultiDebtAuctionInitialParameterSetter/modify-unrecognized-param");
         emit ModifyParameters(parameter, val);
     }
 
@@ -154,7 +155,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     function getNewDebtBid() external view returns (uint256 debtAuctionBidSize) {
         // Get token price
         (uint256 systemCoinPrice, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
-        require(both(systemCoinPrice > 0, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-price");
+        require(both(systemCoinPrice > 0, validSysCoinPrice), "MultiDebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the bid size
         debtAuctionBidSize = divide(multiply(multiply(bidTargetValue, WAD), RAY), systemCoinPrice);
@@ -169,7 +170,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     function getRawProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
-        require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
+        require(both(validProtocolPrice, protocolTknPrice > 0), "MultiDebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the amont of protocol tokens without the premium
         debtAuctionMintedTokens = divide(multiply(bidTargetValue, WAD), protocolTknPrice);
@@ -186,7 +187,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     function getPremiumAdjustedProtocolTokenAmount() external view returns (uint256 debtAuctionMintedTokens) {
         // Get token price
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
-        require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
+        require(both(validProtocolPrice, protocolTknPrice > 0), "MultiDebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the amont of protocol tokens without the premium and apply it
         debtAuctionMintedTokens = divide(multiply(divide(multiply(bidTargetValue, WAD), protocolTknPrice), protocolTokenPremium), THOUSAND);
@@ -202,7 +203,7 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     */
     function setDebtAuctionInitialParameters(address feeReceiver) external {
         // Check delay between calls
-        require(either(subtract(now, lastUpdateTime) >= updateDelay, lastUpdateTime == 0), "DebtAuctionInitialParameterSetter/wait-more");
+        require(either(subtract(now, lastUpdateTime) >= updateDelay, lastUpdateTime == 0), "MultiDebtAuctionInitialParameterSetter/wait-more");
         // Get the caller's reward
         uint256 callerReward = getCallerReward(lastUpdateTime, updateDelay);
         // Store the timestamp of the update
@@ -211,8 +212,8 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         // Get token prices
         (uint256 protocolTknPrice, bool validProtocolPrice) = protocolTokenOrcl.getResultWithValidity();
         (uint256 systemCoinPrice, bool validSysCoinPrice)   = systemCoinOrcl.getResultWithValidity();
-        require(both(validProtocolPrice, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-prices");
-        require(both(protocolTknPrice > 0, systemCoinPrice > 0), "DebtAuctionInitialParameterSetter/null-prices");
+        require(both(validProtocolPrice, validSysCoinPrice), "MultiDebtAuctionInitialParameterSetter/invalid-prices");
+        require(both(protocolTknPrice > 0, systemCoinPrice > 0), "MultiDebtAuctionInitialParameterSetter/null-prices");
 
         // Compute the scaled bid target value
         uint256 scaledBidTargetValue = multiply(bidTargetValue, WAD);
@@ -235,8 +236,8 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         }
 
         // Set the debt bid and the associated protocol token amount in the accounting engine
-        accountingEngine.modifyParameters("debtAuctionBidSize", debtAuctionBidSize);
-        accountingEngine.modifyParameters("initialDebtAuctionMintedTokens", initialDebtAuctionMintedTokens);
+        accountingEngine.modifyParameters(coinName, "debtAuctionBidSize", debtAuctionBidSize);
+        accountingEngine.modifyParameters(coinName, "initialDebtAuctionMintedTokens", initialDebtAuctionMintedTokens);
 
         // Emit an event
         emit SetDebtAuctionInitialParameters(debtAuctionBidSize, initialDebtAuctionMintedTokens);
@@ -251,8 +252,8 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     */
     function manualSetDebtAuctionParameters(uint256 debtAuctionBidSize, uint256 initialDebtAuctionMintedTokens)
       external isAuthorized {
-        accountingEngine.modifyParameters("debtAuctionBidSize", debtAuctionBidSize);
-        accountingEngine.modifyParameters("initialDebtAuctionMintedTokens", initialDebtAuctionMintedTokens);
+        accountingEngine.modifyParameters(coinName, "debtAuctionBidSize", debtAuctionBidSize);
+        accountingEngine.modifyParameters(coinName, "initialDebtAuctionMintedTokens", initialDebtAuctionMintedTokens);
         emit SetDebtAuctionInitialParameters(debtAuctionBidSize, initialDebtAuctionMintedTokens);
     }
 }
