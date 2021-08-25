@@ -21,6 +21,12 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     uint256 public protocolTokenPremium;                                        // [thousand]
     // Value of the initial debt bid
     uint256 public bidTargetValue;                                              // [wad]
+    // Delay between two consecutive updates
+    uint256 public bidValueInflationDelay;
+    // The target inflation applied to bidTargetValue
+    uint256 public bidValueTargetInflation;
+    // The last time when inflation was applied to the bid target value
+    uint256 public bidValueLastInflationUpdateTime;                             // [unix timestamp]
 
     // The protocol token oracle
     OracleLike           public protocolTokenOrcl;
@@ -28,6 +34,9 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     OracleLike           public systemCoinOrcl;
     // The accounting engine contract
     AccountingEngineLike public accountingEngine;
+
+    // Max inflation per period
+    uint256 public constant MAX_INFLATION = 50;
 
     // --- Events ---
     event SetDebtAuctionInitialParameters(uint256 debtAuctionBidSize, uint256 initialDebtAuctionMintedTokens);
@@ -51,14 +60,17 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         require(updateDelay_ > 0, "DebtAuctionInitialParameterSetter/null-update-delay");
         require(bidTargetValue_ > 0, "DebtAuctionInitialParameterSetter/invalid-bid-target-value");
 
-        protocolTokenOrcl              = OracleLike(protocolTokenOrcl_);
-        systemCoinOrcl                 = OracleLike(systemCoinOrcl_);
-        accountingEngine               = AccountingEngineLike(accountingEngine_);
+        protocolTokenOrcl               = OracleLike(protocolTokenOrcl_);
+        systemCoinOrcl                  = OracleLike(systemCoinOrcl_);
+        accountingEngine                = AccountingEngineLike(accountingEngine_);
 
-        minProtocolTokenAmountOffered  = minProtocolTokenAmountOffered_;
-        protocolTokenPremium           = protocolTokenPremium_;
-        updateDelay                    = updateDelay_;
-        bidTargetValue                 = bidTargetValue_;
+        minProtocolTokenAmountOffered   = minProtocolTokenAmountOffered_;
+        protocolTokenPremium            = protocolTokenPremium_;
+        updateDelay                     = updateDelay_;
+        bidTargetValue                  = bidTargetValue_;
+        bidValueTargetInflation         = 0;
+        bidValueInflationDelay          = uint(-1) / 2;
+        bidValueLastInflationUpdateTime = now;
 
         emit ModifyParameters(bytes32("protocolTokenOrcl"), protocolTokenOrcl_);
         emit ModifyParameters(bytes32("systemCoinOrcl"), systemCoinOrcl_);
@@ -75,11 +87,23 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
     }
 
     // --- Math ---
+    uint internal constant HUNDRED  = 100;
     uint internal constant THOUSAND = 10 ** 3;
-    function divide(uint x, uint y) internal pure returns (uint z) {
+    function divide(uint256 x, uint256 y) internal pure returns (uint256 z) {
         require(y > 0, "divide-null-y");
         z = x / y;
         require(z <= x);
+    }
+    function rpower(uint256 x, uint256 n) internal pure returns (uint256 z) {
+        z = n % 2 != 0 ? x : RAY;
+
+        for (n /= 2; n != 0; n /= 2) {
+            x = rmultiply(x, x);
+
+            if (n % 2 != 0) {
+                z = rmultiply(z, x);
+            }
+        }
     }
 
     // --- Administration ---
@@ -139,8 +163,20 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
           bidTargetValue = val;
         }
         else if (parameter == "lastUpdateTime") {
-          require(val > now, "DebtAuctionInitialParameterSetter/");
+          require(val > now, "DebtAuctionInitialParameterSetter/invalid-last-update-time");
           lastUpdateTime = val;
+        }
+        else if (parameter == "bidValueLastInflationUpdateTime") {
+          require(both(val >= bidValueLastInflationUpdateTime, val <= now), "DebtAuctionInitialParameterSetter/invalid-bid-inflation-update-time");
+          bidValueLastInflationUpdateTime = val;
+        }
+        else if (parameter == "bidValueInflationDelay") {
+          require(val <= uint(-1) / 2, "DebtAuctionInitialParameterSetter/invalid-inflation-delay");
+          bidValueInflationDelay = val;
+        }
+        else if (parameter == "bidValueTargetInflation") {
+          require(val <= MAX_INFLATION, "DebtAuctionInitialParameterSetter/invalid-target-inflation");
+          bidValueTargetInflation = val;
         }
         else revert("DebtAuctionInitialParameterSetter/modify-unrecognized-param");
         emit ModifyParameters(parameter, val);
@@ -157,7 +193,8 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         require(both(systemCoinPrice > 0, validSysCoinPrice), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the bid size
-        debtAuctionBidSize = divide(multiply(multiply(bidTargetValue, WAD), RAY), systemCoinPrice);
+        (, uint256 latestTargetValue) = getNewBidTargetValue();
+        debtAuctionBidSize = divide(multiply(multiply(latestTargetValue, WAD), RAY), systemCoinPrice);
         if (debtAuctionBidSize < RAY) {
           debtAuctionBidSize = RAY;
         }
@@ -172,7 +209,8 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the amont of protocol tokens without the premium
-        debtAuctionMintedTokens = divide(multiply(bidTargetValue, WAD), protocolTknPrice);
+        (, uint256 latestTargetValue) = getNewBidTargetValue();
+        debtAuctionMintedTokens = divide(multiply(latestTargetValue, WAD), protocolTknPrice);
 
         // Take into account the minimum amount of protocol tokens to offer
         if (debtAuctionMintedTokens < minProtocolTokenAmountOffered) {
@@ -189,7 +227,10 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         require(both(validProtocolPrice, protocolTknPrice > 0), "DebtAuctionInitialParameterSetter/invalid-price");
 
         // Compute the amont of protocol tokens without the premium and apply it
-        debtAuctionMintedTokens = divide(multiply(divide(multiply(bidTargetValue, WAD), protocolTknPrice), protocolTokenPremium), THOUSAND);
+        (, uint256 latestTargetValue) = getNewBidTargetValue();
+        debtAuctionMintedTokens = divide(
+          multiply(divide(multiply(latestTargetValue, WAD), protocolTknPrice), protocolTokenPremium), THOUSAND
+        );
 
         // Take into account the minimum amount of protocol tokens to offer
         if (debtAuctionMintedTokens < minProtocolTokenAmountOffered) {
@@ -215,7 +256,10 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         require(both(protocolTknPrice > 0, systemCoinPrice > 0), "DebtAuctionInitialParameterSetter/null-prices");
 
         // Compute the scaled bid target value
-        uint256 scaledBidTargetValue = multiply(bidTargetValue, WAD);
+        uint256 updateSlots;
+        (updateSlots, bidTargetValue)   = getNewBidTargetValue();
+        bidValueLastInflationUpdateTime = addition(bidValueLastInflationUpdateTime, multiply(updateSlots, bidValueInflationDelay));
+        uint256 scaledBidTargetValue    = multiply(bidTargetValue, WAD);
 
         // Compute the amont of protocol tokens without the premium
         uint256 initialDebtAuctionMintedTokens = divide(scaledBidTargetValue, protocolTknPrice);
@@ -254,5 +298,19 @@ contract DebtAuctionInitialParameterSetter is IncreasingTreasuryReimbursement {
         accountingEngine.modifyParameters("debtAuctionBidSize", debtAuctionBidSize);
         accountingEngine.modifyParameters("initialDebtAuctionMintedTokens", initialDebtAuctionMintedTokens);
         emit SetDebtAuctionInitialParameters(debtAuctionBidSize, initialDebtAuctionMintedTokens);
+    }
+
+    // --- Internal Logic ---
+    /*
+    * @notice Return the latest bidTargetValue
+    */
+    function getNewBidTargetValue() internal view returns (uint256, uint256) {
+        uint256 updateSlots = subtract(now, bidValueLastInflationUpdateTime) / bidValueInflationDelay;
+
+        if (updateSlots == 0) return (0, bidTargetValue);
+        return (
+          updateSlots,
+          multiply(bidTargetValue, rpower((HUNDRED + bidValueTargetInflation), updateSlots)) / rpower(HUNDRED, updateSlots)
+        );
     }
 }
