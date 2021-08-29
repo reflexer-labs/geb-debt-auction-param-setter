@@ -1,4 +1,4 @@
-/* pragma solidity ^0.6.7;
+pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 
@@ -226,4 +226,4 @@ contract DebtAuctionInitialParameterSetterTest is GebDeployTestBase {
         setter.modifyParameters("lastUpdateTime", now + 1000 weeks);
         assertEq(setter.lastUpdateTime(), now + 1000 weeks);
     }
-} */
+}

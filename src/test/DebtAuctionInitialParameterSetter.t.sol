@@ -1,4 +1,4 @@
-/* pragma solidity ^0.6.7;
+pragma solidity ^0.6.7;
 
 import "ds-test/test.sol";
 import "ds-token/token.sol";
@@ -61,6 +61,7 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
     uint256 baseUpdateCallerReward = 5E18;
     uint256 maxUpdateCallerReward  = 10E18;
     uint256 perSecondCallerRewardIncrease = 1000192559420674483977255848; // 100% per hour
+    uint256 maxRewardIncreaseDelay = 3 hours;
 
     uint256 minProtocolTokenAmountOffered = 0.5 ether;
     uint256 protocolTokenPremium = 700; // 30%
@@ -215,4 +216,68 @@ contract DebtAuctionInitialParameterSetterTest is DSTest {
         setter.modifyParameters("lastUpdateTime", now + 1000 weeks);
         assertEq(setter.lastUpdateTime(), now + 1000 weeks);
     }
-} */
+    function test_set_params_once_with_inflation() public {
+        setter.modifyParameters("bidValueInflationDelay", 1 days);
+        setter.modifyParameters("bidValueTargetInflation", 10);
+
+        uint currentTargetValue = setter.bidTargetValue();
+
+        hevm.warp(now + 1 hours);
+        setter.setDebtAuctionInitialParameters(address(0x1));
+        assertEq(setter.bidValueLastInflationUpdateTime(), now - 1 hours);
+
+        hevm.warp(now + 23 hours);
+        setter.setDebtAuctionInitialParameters(address(0x1));
+        assertEq(setter.bidValueLastInflationUpdateTime(), now);
+
+        assertEq(setter.bidTargetValue(), currentTargetValue + currentTargetValue * 10 / 100);
+    }
+    function test_set_params_first_update_with_inflation_large_delay() public {
+        setter.modifyParameters("bidValueInflationDelay", 1 days);
+        setter.modifyParameters("bidValueTargetInflation", 10);
+
+        uint currentTargetValue = setter.bidTargetValue();
+
+        hevm.warp(now + 10 days);
+        setter.setDebtAuctionInitialParameters(address(0x1));
+        assertEq(setter.bidValueLastInflationUpdateTime(), now);
+    }
+    function test_multi_set_params_with_inflation() public {
+        setter.modifyParameters("maxRewardIncreaseDelay", maxRewardIncreaseDelay);
+
+        setter.modifyParameters("bidValueInflationDelay", 1 days);
+        setter.modifyParameters("bidValueTargetInflation", 10);
+
+        uint currentTargetValue = setter.bidTargetValue();
+
+        hevm.warp(now + 1 hours);
+        setter.setDebtAuctionInitialParameters(address(0x1));
+        assertEq(setter.bidValueLastInflationUpdateTime(), now - 1 hours);
+
+        hevm.warp(now + 95 hours);
+        setter.setDebtAuctionInitialParameters(address(0x1));
+        assertEq(setter.bidValueLastInflationUpdateTime(), now);
+
+        for (uint i = 0; i < 4; i++) {
+            currentTargetValue = currentTargetValue + currentTargetValue / 100 * 10;
+        }
+
+        assertEq(setter.bidTargetValue(), currentTargetValue);
+    }
+    function testFail_multi_set_params_large_delay() public {
+        setter.modifyParameters("maxRewardIncreaseDelay", maxRewardIncreaseDelay);
+
+        setter.modifyParameters("bidValueInflationDelay", 1 days);
+        setter.modifyParameters("bidValueTargetInflation", 10);
+
+        uint currentTargetValue = setter.bidTargetValue();
+
+        hevm.warp(now + 1 hours);
+        setter.setDebtAuctionInitialParameters(address(0x1));
+        assertEq(setter.bidValueLastInflationUpdateTime(), now - 1 hours);
+
+        hevm.warp(now + 3650 days);
+        setter.setDebtAuctionInitialParameters(address(0x1));
+        assertEq(setter.bidValueLastInflationUpdateTime(), now);
+    }
+}

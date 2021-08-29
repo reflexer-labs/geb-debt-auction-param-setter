@@ -59,7 +59,7 @@ contract MultiDebtAuctionInitialParameterSetter is MultiIncreasingTreasuryReimbu
         require(protocolTokenPremium_ < THOUSAND, "MultiDebtAuctionInitialParameterSetter/invalid-prot-token-premium");
         require(both(both(protocolTokenOrcl_ != address(0), systemCoinOrcl_ != address(0)), accountingEngine_ != address(0)), "MultiDebtAuctionInitialParameterSetter/invalid-contract-address");
         require(updateDelay_ > 0, "MultiDebtAuctionInitialParameterSetter/null-update-delay");
-        require(bidTargetValue_ > 0, "MultiDebtAuctionInitialParameterSetter/invalid-bid-target-value");
+        require(bidTargetValue_ >= HUNDRED, "MultiDebtAuctionInitialParameterSetter/invalid-bid-target-value");
 
         protocolTokenOrcl               = OracleLike(protocolTokenOrcl_);
         systemCoinOrcl                  = OracleLike(systemCoinOrcl_);
@@ -70,7 +70,7 @@ contract MultiDebtAuctionInitialParameterSetter is MultiIncreasingTreasuryReimbu
         updateDelay                     = updateDelay_;
         bidTargetValue                  = bidTargetValue_;
         bidValueTargetInflation         = 0;
-        bidValueInflationDelay          = uint(-1) / 2;
+        bidValueInflationDelay          = uint(-1) / 10;
         bidValueLastInflationUpdateTime = now;
 
         emit ModifyParameters(bytes32("protocolTokenOrcl"), protocolTokenOrcl_);
@@ -160,7 +160,7 @@ contract MultiDebtAuctionInitialParameterSetter is MultiIncreasingTreasuryReimbu
           updateDelay = val;
         }
         else if (parameter == "bidTargetValue") {
-          require(val > 0, "MultiDebtAuctionInitialParameterSetter/invalid-bid-target-value");
+          require(val >= HUNDRED, "MultiDebtAuctionInitialParameterSetter/invalid-bid-target-value");
           bidTargetValue = val;
         }
         else if (parameter == "lastUpdateTime") {
@@ -172,7 +172,7 @@ contract MultiDebtAuctionInitialParameterSetter is MultiIncreasingTreasuryReimbu
           bidValueLastInflationUpdateTime = val;
         }
         else if (parameter == "bidValueInflationDelay") {
-          require(val <= uint(-1) / 2, "MultiDebtAuctionInitialParameterSetter/invalid-inflation-delay");
+          require(val <= uint(-1) / 10, "MultiDebtAuctionInitialParameterSetter/invalid-inflation-delay");
           bidValueInflationDelay = val;
         }
         else if (parameter == "bidValueTargetInflation") {
@@ -309,9 +309,16 @@ contract MultiDebtAuctionInitialParameterSetter is MultiIncreasingTreasuryReimbu
         uint256 updateSlots = subtract(now, bidValueLastInflationUpdateTime) / bidValueInflationDelay;
 
         if (updateSlots == 0) return (0, bidTargetValue);
+
+        uint256 targetValue = bidTargetValue;
+
+        for (uint i = 0; i < updateSlots; i++) {
+            targetValue = addition(targetValue, multiply(targetValue / HUNDRED, bidValueTargetInflation));
+        }
+
         return (
           updateSlots,
-          multiply(bidTargetValue, rpower((HUNDRED + bidValueTargetInflation), updateSlots)) / rpower(HUNDRED, updateSlots)
+          targetValue
         );
     }
 }
